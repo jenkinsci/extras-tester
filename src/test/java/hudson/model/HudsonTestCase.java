@@ -6,27 +6,24 @@ import hudson.tasks.Shell;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 
 import javax.servlet.ServletContext;
 
-import org.apache.tools.ant.taskdefs.ExecTask;
-import org.apache.tools.ant.taskdefs.Execute;
-import org.apache.tools.ant.types.Commandline;
-import org.apache.tools.ant.util.StringUtils;
-import org.easymock.EasyMock;
-
 import junit.framework.TestCase;
 
-public class HudsonTestCase extends TestCase {
-    Hudson hudson;
+import org.apache.tools.ant.taskdefs.Execute;
+import org.easymock.EasyMock;
+
+public abstract class HudsonTestCase extends TestCase {
+    protected static Hudson hudson;
 
     @Override
     protected void setUp() throws Exception {
-        hudson = newHudson();
+        if (hudson == null)
+            hudson = newHudson();
 
         // Limit to 1 executor
         setNumExecutors(1);
