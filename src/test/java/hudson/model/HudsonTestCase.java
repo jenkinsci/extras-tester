@@ -76,13 +76,14 @@ public class HudsonTestCase extends TestCase {
      * 
      * @param project
      *            the project to build
-     * @return build result
+     * @return build result, or null if project is disabled
      * @throws Exception
      */
     protected Result build(Project project) {
         try {
             int numbuilds = project.getBuilds().size() + 1;
-            project.scheduleBuild();
+            if (! project.scheduleBuild())
+                return null;
             while (project.getBuilds().size() != numbuilds || project.getBuildByNumber(numbuilds).isBuilding()) {
                 Thread.sleep(100);
             }

@@ -41,7 +41,11 @@ public class SubversionSCMTest extends HudsonTestCase {
         exec(new String[] { "svn", "up", projectDir.getPath() });
         exec(new String[] { "svn", "rm", projectDir.getPath() });
         exec(new String[] { "svn", "commit", "-m", "deleted", projectDir.getPath() });
+
         result = build(project);
         assertFailure(result);
+
+        result = build(project);
+        assertNull("Project should be disabled", result);
     }
 }
