@@ -14,6 +14,9 @@ import junit.framework.TestCase;
 
 import org.easymock.EasyMock;
 
+/**
+ * Setup a free-style project and uses the Shell builder to exercise both SUCCESS and FAILURE.
+ */
 public class FreeStyleProjectTest extends TestCase {
     private int numbuilds = 0;
 
@@ -45,6 +48,12 @@ public class FreeStyleProjectTest extends TestCase {
         assertTrue(result.equals(Result.FAILURE));
     }
 
+    /**
+     * Clears the builders and add a Shell builder with specified command
+     * @param project project to build
+     * @param command command to run in shell
+     * @throws Exception
+     */
     private void setCommand(FreeStyleProject project, String command) throws Exception {
         // FIXME would be nice to be able to set the builders programmatically
         Field buildersField = Project.class.getDeclaredField("builders");
@@ -54,6 +63,12 @@ public class FreeStyleProjectTest extends TestCase {
         builders.add(new Shell(command));
     }
 
+    /**
+     * Schedules a build and waits for completion
+     * @param project the project to build
+     * @return build result
+     * @throws Exception
+     */
     private Result build(Project project) throws Exception {
         numbuilds++;
         project.scheduleBuild();
