@@ -14,6 +14,7 @@ import hudson.tasks.Shell;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -148,16 +149,16 @@ public class FreeStyleProjectTest extends HudsonTestCase {
         result = build(project);
         assertFailure(result);
         assertTrue("number of recipients not 2", mail.getAllRecipients().length == 2);
-        assertEquals(mail.getAllRecipients()[0], new InternetAddress("user1@company.com"));
-        assertEquals(mail.getAllRecipients()[1], new InternetAddress("user2@company.com"));
+        assertTrue(Arrays.asList(mail.getAllRecipients()).indexOf(new InternetAddress("user1@company.com")) != -1);
+        assertTrue(Arrays.asList(mail.getAllRecipients()).indexOf(new InternetAddress("user2@company.com")) != -1);
 
         setCommand(project, "echo Back to normal");
         nextChangeLog = new File("src/test/java/hudson/model/changelog-user2.xml");
         result = build(project);
         assertSuccess(result);
         assertTrue("number of recipients not 2", mail.getAllRecipients().length == 2);
-        assertEquals(mail.getAllRecipients()[0], new InternetAddress("user1@company.com"));
-        assertEquals(mail.getAllRecipients()[1], new InternetAddress("user2@company.com"));
+        assertTrue(Arrays.asList(mail.getAllRecipients()).indexOf(new InternetAddress("user1@company.com")) != -1);
+        assertTrue(Arrays.asList(mail.getAllRecipients()).indexOf(new InternetAddress("user2@company.com")) != -1);
 
         setCommand(project, "new failure");
         nextChangeLog = new File("src/test/java/hudson/model/changelog-user1.xml");
