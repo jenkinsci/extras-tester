@@ -6,16 +6,12 @@ import hudson.scm.ChangeLogParser;
 import hudson.scm.NullSCM;
 import hudson.scm.SubversionChangeLogParser;
 import hudson.tasks.ArtifactArchiver;
-import hudson.tasks.Builder;
 import hudson.tasks.MailSender;
 import hudson.tasks.Mailer;
-import hudson.tasks.Shell;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Level;
 
 import javax.mail.Address;

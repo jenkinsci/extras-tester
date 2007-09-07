@@ -22,8 +22,9 @@ public abstract class HudsonTestCase extends TestCase {
 
     @Override
     protected void setUp() throws Exception {
-        if (hudson == null)
+        if (hudson == null) {
             hudson = newHudson();
+        }
 
         // Limit to 1 executor
         setNumExecutors(1);
@@ -77,19 +78,30 @@ public abstract class HudsonTestCase extends TestCase {
      * @throws Exception
      */
     protected Result build(Project project) {
+        if (!project.scheduleBuild())
+            return null;
+        return waitForNextBuild(project);
+    }
+
+    protected Result waitForBuild(int numbuilds, Project project) {
         try {
-            int numbuilds = project.getBuilds().size() + 1;
-            if (! project.scheduleBuild())
-                return null;
+            long slept = 0;
             while (project.getBuilds().size() != numbuilds || project.getBuildByNumber(numbuilds).isBuilding()) {
                 Thread.sleep(100);
+                slept+=100;
+                if (slept >= 20000)
+                    fail("Timed out waiting 20 seconds for project " + project.getName() + " build #" + numbuilds);
             }
+
             Build build = ((Build) project.getBuildByNumber(numbuilds));
             System.out.println(build.getLog());
             return build.getResult();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+    protected Result waitForNextBuild(Project project) {
+        return waitForBuild(project.getBuilds().size() + 1, project);
     }
 
     /**
@@ -101,7 +113,8 @@ public abstract class HudsonTestCase extends TestCase {
      *            command to run in shell
      * @throws Exception
      */
-    protected void setCommand(FreeStyleProject project, String command) {
+    @SuppressWarnings("unchecked")
+    protected void setCommand(AbstractProject project, String command) {
         // FIXME would be nice to be able to set the builders programmatically
         Field buildersField;
         try {
@@ -114,13 +127,16 @@ public abstract class HudsonTestCase extends TestCase {
             throw new RuntimeException(e);
         }
     }
+
     protected void assertSuccess(Result result) {
         assertTrue("Expected SUCCESS, got " + result.toString(), result.equals(Result.SUCCESS));
     }
+
     protected void assertFailure(Result result) {
         assertTrue("Expected FAILURE, got " + result.toString(), result.equals(Result.FAILURE));
     }
-    void exec(String[] args) {
+
+    void exec(String... args) {
         Execute exec = new Execute();
         exec.setCommandline(args);
         int status;

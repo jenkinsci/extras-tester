@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.jvnet.hudson</groupId>
-  <artifactId>tester</artifactId>
+  <artifactId>hudson-tester</artifactId>
   <name>Hudson Tester</name>
   <version>1.0-SNAPSHOT</version>
   <description>Run tests on Hudson itself.  The tests cannot be integrated into Hudson itself because a build
