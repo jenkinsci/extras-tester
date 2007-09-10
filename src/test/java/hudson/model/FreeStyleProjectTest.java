@@ -131,7 +131,20 @@ public class FreeStyleProjectTest extends HudsonTestCase {
         nextChangeLog = null;
         result = build(project);
         assertSuccess(result);
-        assertNull("Not expecting an email", mail);
+        assertNull("Not expecting email: " + mail, mail);
+
+        setCommand(project, "glops");
+        nextChangeLog = null;
+        result = build(project);
+        assertFailure(result);
+        assertNull("Not expecting recipients: " + mail.getAllRecipients(), mail.getAllRecipients());
+
+        setCommand(project, "echo Hello World");
+        nextChangeLog = null;
+        result = build(project);
+        assertSuccess(result);
+        // FIXME in the first test, mail is null, here mail.getAllRecipients() is null!
+        assertNull("Not expecting recipients: " + mail.getAllRecipients(), mail.getAllRecipients());
 
         setCommand(project, "nonexistentcommand1");
         nextChangeLog = new File("src/test/java/hudson/model/changelog-user1.xml");
