@@ -22,12 +22,18 @@ public abstract class HudsonTestCase extends TestCase {
 
     @Override
     protected void setUp() throws Exception {
-        if (hudson == null) {
-            hudson = newHudson();
-        }
+        hudson = newHudson();
 
         // Limit to 1 executor
         setNumExecutors(1);
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        // FIXME would be nice to be able to reset the Hudson instance programmatically
+        Field theInstance = Hudson.class.getDeclaredField("theInstance");
+        theInstance.setAccessible(true);
+        theInstance.set(hudson, null);
     }
 
     protected void setNumExecutors(int i) {
@@ -88,7 +94,7 @@ public abstract class HudsonTestCase extends TestCase {
             long slept = 0;
             while (project.getBuilds().size() != numbuilds || project.getBuildByNumber(numbuilds).isBuilding()) {
                 Thread.sleep(100);
-                slept+=100;
+                slept += 100;
                 if (slept >= 20000)
                     fail("Timed out waiting 20 seconds for project " + project.getName() + " build #" + numbuilds);
             }
@@ -100,6 +106,7 @@ public abstract class HudsonTestCase extends TestCase {
             throw new RuntimeException(e);
         }
     }
+
     protected Result waitForNextBuild(Project project) {
         return waitForBuild(project.getBuilds().size() + 1, project);
     }
