@@ -4,8 +4,12 @@ import hudson.scm.SubversionSCM;
 
 import java.io.File;
 
+import org.tmatesoft.svn.core.internal.io.fs.FSRepositoryFactory;
+import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
+
 public abstract class SubversionTestCase extends HudsonTestCase {
     protected File svnrepo;
+    protected String repositoryLocation;
 
     protected File svnwc;
 
@@ -22,7 +26,12 @@ public abstract class SubversionTestCase extends HudsonTestCase {
         svnwc = new File(tempdir, "wc");
         svnwc.mkdir();
         exec("svnadmin", "create", svnrepo.getPath());
-        exec("svn", "co", "file://" + svnrepo.getPath(), svnwc.getPath());
+        repositoryLocation = "file://" + svnrepo.getPath();
+        exec("svn", "co", repositoryLocation, svnwc.getPath());
+        
+        // For unit tests, this is required
+        SVNRepositoryFactoryImpl.setup();
+        FSRepositoryFactory.setup();
     }
 
     /**

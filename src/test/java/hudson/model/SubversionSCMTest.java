@@ -3,12 +3,22 @@ package hudson.model;
 import hudson.scm.SubversionSCM;
 
 import java.io.File;
+import java.util.logging.Logger;
 
 /**
  * Tests for {@link SubversionSCM}. Requires a *nix machine with Subversion client and server installed.
  */
 public class SubversionSCMTest extends SubversionTestCase {
-    public void testSubversionSCM() {
+    private static final Logger log = Logger.getLogger(SubversionSCMTest.class.getName());
+
+    public void testRemotePathExistsWithHudsonAPI() throws Exception {
+        assertFalse(new SubversionSCM(new String[] { "file://" + svnrepo + "/nonexistent" }, new String[] { "." },
+                true, "user1", null).repositoryLocationsExist());
+        assertTrue(new SubversionSCM(new String[] { "file://" + svnrepo }, new String[] { "." }, true, "user1", null)
+                .repositoryLocationsExist());
+    }
+
+    public void testDeleteProject() {
         FreeStyleProject project = new FreeStyleProject(Hudson.getInstance(), "test");
         File projectDir = createSubversionProject(project);
         File hello = new File(projectDir, "hello");
@@ -34,5 +44,6 @@ public class SubversionSCMTest extends SubversionTestCase {
 
         result = build(project);
         assertNull("Project should be disabled", result);
+        assertTrue(project.disabled);
     }
 }
