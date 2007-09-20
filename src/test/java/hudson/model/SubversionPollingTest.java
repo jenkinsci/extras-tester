@@ -9,7 +9,6 @@ import hudson.triggers.Trigger;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
 import java.util.logging.Logger;
