@@ -39,7 +39,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
      * 
      * @param project
      * @param projectName
-     * @return
+     * @return working copy directory
      */
     protected File createSubversionProject(FreeStyleProject project) {
         File projectDir = new File(svnwc, project.getName());
