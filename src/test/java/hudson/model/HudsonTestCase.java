@@ -42,7 +42,7 @@ public abstract class HudsonTestCase extends TestCase {
         try {
             numExecutors = Hudson.class.getDeclaredField("numExecutors");
             numExecutors.setAccessible(true);
-            numExecutors.set(hudson, 1);
+            numExecutors.set(hudson, i);
             Method updateComputerList = Hudson.class.getDeclaredMethod("updateComputerList", new Class[] {});
             updateComputerList.setAccessible(true);
             updateComputerList.invoke(hudson, new Object[] {});
