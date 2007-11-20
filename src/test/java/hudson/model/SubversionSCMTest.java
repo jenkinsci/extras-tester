@@ -1,20 +1,33 @@
 package hudson.model;
 
+import hudson.scm.SubversionRepositoryBrowser;
 import hudson.scm.SubversionSCM;
 
 import java.io.File;
 import java.util.logging.Logger;
 
 /**
- * Tests for {@link SubversionSCM}. Requires a *nix machine with Subversion client and server installed.
+ * Tests for {@link SubversionSCM}. Requires Subversion client and server to be installed.
  */
 public class SubversionSCMTest extends SubversionTestCase {
     private static final Logger log = Logger.getLogger(SubversionSCMTest.class.getName());
 
-    public void testRemotePathExistsWithHudsonAPI() throws Exception {
-        assertFalse(new SubversionSCM(new String[] { "file://" + svnrepo + "/nonexistent" }, new String[] { "." },
-                true, "user1", null).repositoryLocationsExist());
-        assertTrue(new SubversionSCM(new String[] { "file://" + svnrepo }, new String[] { "." }, true, "user1", null)
+    SubversionRepositoryBrowser browser; 
+    
+    @Override
+	protected void setUp() throws Exception {
+		super.setUp();
+		
+		// Without mocking, not sure how to get a stapler request in a headless test, 
+		// so pass in a null browser since not used in the test. 
+	    // RepositoryBrowsers.createInstance(SubversionRepositoryBrowser.class, req, "svn.browser")
+		browser = null;
+	}
+
+	public void testRemotePathExistsWithHudsonAPI() throws Exception {
+        assertFalse(new SubversionSCM(new String[] { getFileUrlProtocol() + svnrepo + "/nonexistent" }, new String[] { "." },
+                true, browser).repositoryLocationsExist());
+        assertTrue(new SubversionSCM(new String[] { getFileUrlProtocol() + svnrepo }, new String[] { "." }, true, browser)
                 .repositoryLocationsExist());
     }
 

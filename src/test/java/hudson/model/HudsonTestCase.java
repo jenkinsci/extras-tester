@@ -89,17 +89,17 @@ public abstract class HudsonTestCase extends TestCase {
         return waitForNextBuild(project);
     }
 
-    protected Result waitForBuild(int numbuilds, Project project) {
+    protected Result waitForBuild(int buildToWaitFor, Project project) {
         try {
             long slept = 0;
-            while (project.getBuilds().size() != numbuilds || project.getBuildByNumber(numbuilds).isBuilding()) {
+            while (project.getBuilds().size() != buildToWaitFor || project.getBuildByNumber(buildToWaitFor).isBuilding()) {
                 Thread.sleep(100);
                 slept += 100;
                 if (slept >= 20000)
-                    fail("Timed out waiting 20 seconds for project " + project.getName() + " build #" + numbuilds);
+                    fail("Timed out waiting 20 seconds for project " + project.getName() + " build #" + buildToWaitFor);
             }
 
-            Build build = ((Build) project.getBuildByNumber(numbuilds));
+            Build build = ((Build) project.getBuildByNumber(buildToWaitFor));
             System.out.println(build.getLog());
             return build.getResult();
         } catch (Exception e) {
@@ -154,5 +154,15 @@ public abstract class HudsonTestCase extends TestCase {
         }
         if (status != 0)
             throw new RuntimeException("Command returned status " + status + ": " + Arrays.asList(args));
+    }
+    
+    /**
+     * Check whether we are running on Microsoft windoze. 
+     * Only tested for Windows XP. 
+     * @return true if running under windows. 
+     */
+    boolean onMsftWindows() { 
+    	String osName = System.getProperty("os.name");
+    	return osName.startsWith("Windows");
     }
 }

@@ -4,12 +4,13 @@ import hudson.scm.SubversionSCM;
 
 import java.io.File;
 
+import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.internal.io.fs.FSRepositoryFactory;
 import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
 
 public abstract class SubversionTestCase extends HudsonTestCase {
     protected File svnrepo;
-    protected String repositoryLocation;
+    private String repositoryLocation;
 
     protected File svnwc;
 
@@ -26,8 +27,12 @@ public abstract class SubversionTestCase extends HudsonTestCase {
         svnwc = new File(tempdir, "wc");
         svnwc.mkdir();
         exec("svnadmin", "create", svnrepo.getPath());
-        repositoryLocation = "file://" + svnrepo.getPath();
-        exec("svn", "co", repositoryLocation, svnwc.getPath());
+
+        // make repository url platform independent
+        repositoryLocation = getFileUrlProtocol() + svnrepo.getPath();
+        String svnUrl = SVNURL.parseURIDecoded(repositoryLocation).toDecodedString();
+                
+        exec("svn", "co", svnUrl, svnwc.getPath());
         
         // For unit tests, this is required
         SVNRepositoryFactoryImpl.setup();
@@ -47,8 +52,20 @@ public abstract class SubversionTestCase extends HudsonTestCase {
         exec("svn", "add", projectDir.getPath());
         exec("svn", "commit", "-m", "newproject", projectDir.getPath());
 
-        project.setScm(new SubversionSCM(new String[] { "file://" + svnrepo + "/" + projectDir.getName() },
-                new String[] { "." }, true, "user1", null));
+        project.setScm(new SubversionSCM(new String[] { getFileUrlProtocol() + svnrepo + "/" + projectDir.getName() },
+                new String[] { "." }, true, null));
         return projectDir;
     }
+
+    /**
+     * experimental
+     * might need one more slash at end of protocol for windows
+     * (untested on *nix) 
+     * @return the proper protocol based on the OS
+     */
+	protected String getFileUrlProtocol() {
+		String fileUrlProtocol = onMsftWindows()? "file:///" : "file://";
+		return fileUrlProtocol;
+	}
+
 }

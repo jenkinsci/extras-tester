@@ -17,7 +17,9 @@ public class Issue886Test extends SubversionTestCase {
         for (int i = 0; i < 1000; i++) {
             // build() is too slow, use checkout directly
             //build(project);
-            project.getScm().checkout(new FreeStyleBuild(project), null, new FilePath(projectDir), new StreamBuildListener(System.err), new File("/dev/null"));
+        	String devNull = onMsftWindows()? "nul" : "/dev/null";
+            project.getScm().checkout(new FreeStyleBuild(project), null, 
+            		new FilePath(projectDir), new StreamBuildListener(System.err), new File(devNull));
             System.gc();
             System.out.println(mmx.getHeapMemoryUsage());
         }
