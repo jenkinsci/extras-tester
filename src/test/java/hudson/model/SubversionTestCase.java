@@ -1,12 +1,17 @@
 package hudson.model;
 
 import hudson.scm.SubversionSCM;
+import hudson.triggers.SCMTrigger;
+import hudson.triggers.Trigger;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.internal.io.fs.FSRepositoryFactory;
 import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
+
+import antlr.ANTLRException;
 
 public abstract class SubversionTestCase extends HudsonTestCase {
 	protected File svnrepo;
@@ -80,6 +85,22 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 		final String fileUrl = "file://";
 		String rootDir = onMsftWindows() ? "/" : "";
 		return fileUrl + rootDir;
+	}
+
+	protected File createPollingSubversionProject(FreeStyleProject project)
+			throws ANTLRException, IOException {
+		File wcProject = createSubversionProject(project);
+		triggerSubversionPolling(project);
+		return wcProject; 
+	}
+
+	@SuppressWarnings("unchecked")
+	protected void triggerSubversionPolling(FreeStyleProject project)
+			throws ANTLRException, IOException {
+		final String EVERY_SECOND = "* * * * *";
+		Trigger t1 = new SCMTrigger(EVERY_SECOND);
+		project.addTrigger(t1);
+		t1.start(project, false);
 	}
 
 }

@@ -8,6 +8,7 @@ import hudson.triggers.Trigger;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
@@ -15,24 +16,21 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
 
+import antlr.ANTLRException;
+
 /**
- * Test case for Commit spanning multiple interdependant projects
+ * Test case for Commit spanning multiple interdependent projects
  * See http://www.nabble.com/Commit-spanning-multiple-interdependant-projects-tf3870814.html#a10966678
  */
 public class SubversionPollingTest extends SubversionTestCase {
     private static final Logger LOGGER = Logger.getLogger(SubversionPollingTest.class.getName());
 
-    private static final String EVERY_SECOND = "* * * * *";
     FreeStyleProject projectA, projectB, projectC;
     File wcProjectA, wcProjectB;
 
     @SuppressWarnings("unchecked")
     protected void createProjects() throws Exception {
         projectA = (FreeStyleProject) hudson.createProject(FreeStyleProject.DESCRIPTOR, "projectFoo");
-        Trigger t1 = new SCMTrigger(EVERY_SECOND);
-        projectA.addTrigger(t1);
-        t1.start(projectA, false);
-        wcProjectA = createSubversionProject(projectA);
         projectB = (FreeStyleProject) hudson.createProject(FreeStyleProject.DESCRIPTOR, "projectBar");
         projectC = (FreeStyleProject) hudson.createProject(FreeStyleProject.DESCRIPTOR, "projectAbc");
         
@@ -40,12 +38,11 @@ public class SubversionPollingTest extends SubversionTestCase {
         projectA.addPublisher(new BuildTrigger(Arrays.asList(new AbstractProject[]{projectB, projectC}), null));
         // And between B and C
         projectB.addPublisher(new BuildTrigger(Arrays.asList(new AbstractProject[]{projectC}), null));
-
         hudson.rebuildDependencyGraph();
-        Trigger t2 = new SCMTrigger(EVERY_SECOND);
-        projectB.addTrigger(t2);
-        t2.start(projectB, false);
-        wcProjectB = createSubversionProject(projectB);
+
+        wcProjectA = createPollingSubversionProject(projectA);
+        wcProjectB = createPollingSubversionProject(projectB);
+        
         setCommand(projectB, "sh -xe build.sh");
     }
 
