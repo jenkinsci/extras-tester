@@ -29,7 +29,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
         exec("svnadmin", "create", svnrepo.getPath());
 
         // make repository url platform independent
-        repositoryLocation = getFileUrlProtocol() + svnrepo.getPath();
+        repositoryLocation = getFileProtocolAndAbsolutePathStart() + svnrepo.getPath();
         String svnUrl = SVNURL.parseURIDecoded(repositoryLocation).toDecodedString();
                 
         exec("svn", "co", svnUrl, svnwc.getPath());
@@ -52,20 +52,28 @@ public abstract class SubversionTestCase extends HudsonTestCase {
         exec("svn", "add", projectDir.getPath());
         exec("svn", "commit", "-m", "newproject", projectDir.getPath());
 
-        project.setScm(new SubversionSCM(new String[] { getFileUrlProtocol() + svnrepo + "/" + projectDir.getName() },
+        project.setScm(new SubversionSCM(new String[] { getFileProtocolAndAbsolutePathStart() + svnrepo + "/" + projectDir.getName() },
                 new String[] { "." }, true, null));
         return projectDir;
     }
 
     /**
-     * experimental
-     * might need one more slash at end of protocol for windows
-     * (untested on *nix) 
-     * @return the proper protocol based on the OS
+     * return the file protocol and (if needed by OS) the character needed
+     * to indicate we have an absolute path.  
+     * 
+     * More background provided by daniel dyer <danielwdyer@dsl.pipex.com>: 
+     * The third slash is to normalise the file path so that it starts with a slash (e.g. /C:/Windows) to
+     * indicate that it is an absolute path.  This isn't necessary on Linux because an absolute path already begins with a
+     * slash.
+     * It's not really part of the protocol part of the URL, which is clearer if you consider that file:///C:/Windows is
+	 * shorthand for file://localhost/C:/Windows.
+     *  
+     * @return the proper protocol and root dir based on the OS
      */
-	protected String getFileUrlProtocol() {
-		String fileUrlProtocol = onMsftWindows()? "file:///" : "file://";
-		return fileUrlProtocol;
+	protected String getFileProtocolAndAbsolutePathStart() {
+		final String fileUrl = "file://";
+		String rootDir = onMsftWindows()? "/" : "";
+		return fileUrl + rootDir;
 	}
 
 }

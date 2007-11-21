@@ -25,9 +25,9 @@ public class SubversionSCMTest extends SubversionTestCase {
 	}
 
 	public void testRemotePathExistsWithHudsonAPI() throws Exception {
-        assertFalse(new SubversionSCM(new String[] { getFileUrlProtocol() + svnrepo + "/nonexistent" }, new String[] { "." },
+        assertFalse(new SubversionSCM(new String[] { getFileProtocolAndAbsolutePathStart() + svnrepo + "/nonexistent" }, new String[] { "." },
                 true, browser).repositoryLocationsExist());
-        assertTrue(new SubversionSCM(new String[] { getFileUrlProtocol() + svnrepo }, new String[] { "." }, true, browser)
+        assertTrue(new SubversionSCM(new String[] { getFileProtocolAndAbsolutePathStart() + svnrepo }, new String[] { "." }, true, browser)
                 .repositoryLocationsExist());
     }
 
