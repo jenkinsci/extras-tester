@@ -95,7 +95,7 @@ public abstract class HudsonTestCase extends TestCase {
             while (project.getBuilds().size() != buildToWaitFor || project.getBuildByNumber(buildToWaitFor).isBuilding()) {
                 Thread.sleep(100);
                 slept += 100;
-                if (slept >= 20000)
+                if (slept >= 20000) 
                     fail("Timed out waiting 20 seconds for project " + project.getName() + " build #" + buildToWaitFor);
             }
 
@@ -143,7 +143,7 @@ public abstract class HudsonTestCase extends TestCase {
         assertTrue("Expected FAILURE, got " + result.toString(), result.equals(Result.FAILURE));
     }
 
-    void exec(String... args) {
+    public void exec(String... args) {
         Execute exec = new Execute();
         exec.setCommandline(args);
         int status;
@@ -159,7 +159,8 @@ public abstract class HudsonTestCase extends TestCase {
     /**
      * Check whether we are running on Microsoft windoze. 
      * Only tested for Windows XP. 
-     * @return true if running under windows. 
+     * @return true if running under windows.
+     * @todo research whether should instead call Hudson.isWindows() 
      */
     boolean onMsftWindows() { 
     	String osName = System.getProperty("os.name");
