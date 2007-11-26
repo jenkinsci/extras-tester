@@ -26,7 +26,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 */
 	protected void setUp() throws Exception {
 		super.setUp();
-		File tempdir = createTempDir("svn");
+		File tempdir = createTempDir("hudson-svntest");
 		svnrepo = new File(tempdir, "repo");
 		svnrepo.mkdir();
 		svnwc = new File(tempdir, "wc");
@@ -57,8 +57,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	protected File createSubversionProject(FreeStyleProject project) {
 		File projectDir = new File(svnwc, project.getName());
 		exec("mkdir", projectDir.getPath());
-		exec("svn", "add", projectDir.getPath());
-		exec("svn", "commit", "-m", "newproject", projectDir.getPath());
+		svnAdd(projectDir, "newproject");
 
 		project.setScm(new SubversionSCM(
 				new String[] { getFileProtocolAndAbsolutePathStart() + svnrepo
@@ -87,20 +86,49 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 		return fileUrl + rootDir;
 	}
 
-	protected File createPollingSubversionProject(FreeStyleProject project)
-			throws ANTLRException, IOException {
+	protected File createNonpollingSubversionProject(FreeStyleProject project)
+	throws ANTLRException, IOException {
 		File wcProject = createSubversionProject(project);
-		triggerSubversionPolling(project);
+		triggerSubversionPolling(project, false);
+		return wcProject; 
+	}
+
+	protected File createPollingSubversionProject(FreeStyleProject project)
+	throws ANTLRException, IOException {
+		File wcProject = createSubversionProject(project);
+		triggerSubversionPolling(project, true);
 		return wcProject; 
 	}
 
 	@SuppressWarnings("unchecked")
-	protected void triggerSubversionPolling(FreeStyleProject project)
+	protected Trigger triggerSubversionPolling(FreeStyleProject project, boolean startImmediately)
 			throws ANTLRException, IOException {
 		final String EVERY_SECOND = "* * * * *";
 		Trigger t1 = new SCMTrigger(EVERY_SECOND);
 		project.addTrigger(t1);
-		t1.start(project, false);
+		if (startImmediately) { 
+			t1.start(project, false);
+		}
+		return t1;
+	}
+
+	/** 
+	 * add file to svn
+	 * @param file the file
+	 * @param comment checkin comment
+	 */
+	public void svnAdd(File file, String comment) {
+		exec("svn", "add", file.getPath());
+        exec("svn", "commit", "-m", comment, file.getPath());
+	}
+
+	/** 
+	 * commit changed file to svn
+	 * @param file the file
+	 * @param comment checkin comment
+	 */
+	public void svnCommit(File file, String comment) {
+        exec("svn", "commit", "-m", comment, file.getPath());
 	}
 
 }
