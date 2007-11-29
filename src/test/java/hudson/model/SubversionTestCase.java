@@ -6,6 +6,9 @@ import hudson.triggers.Trigger;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.internal.io.fs.FSRepositoryFactory;
@@ -16,9 +19,14 @@ import antlr.ANTLRException;
 public abstract class SubversionTestCase extends HudsonTestCase {
 	protected File svnrepo;
 	private String repositoryLocation;
-
 	protected File svnwc;
 
+	/**
+	 * cache of uncommitted changes. 
+	 */
+	protected List<String> uncommittedChanges = new ArrayList<String>();
+	
+	
 	@Override
 	/**
 	 * Initializes the SVN repository and checks it out. Provides
@@ -57,7 +65,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	protected File createSubversionProject(FreeStyleProject project) {
 		File projectDir = new File(svnwc, project.getName());
 		exec("mkdir", projectDir.getPath());
-		svnAdd(projectDir, "newproject");
+		svnAdd(projectDir);
 
 		project.setScm(new SubversionSCM(
 				new String[] { getFileProtocolAndAbsolutePathStart() + svnrepo
@@ -113,13 +121,30 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	}
 
 	/** 
+	 * add file to svn without committing. 
+	 * @param file the file
+	 */
+	public void svnAdd(File file) {
+		exec("svn", "add", file.getPath());
+		svnCache(file);
+	}
+
+	/** 
 	 * add file to svn
 	 * @param file the file
 	 * @param comment checkin comment
 	 */
 	public void svnAdd(File file, String comment) {
-		exec("svn", "add", file.getPath());
-        exec("svn", "commit", "-m", comment, file.getPath());
+		svnAdd(file);
+        svnCommit(file, comment);
+	}
+
+	/** 
+	 * cached changed file for svn, but don't commit
+	 * @param file the file
+	 */
+	public void svnCache(File file) {
+		uncommittedChanges.add("\"" + file.getPath() + "\"");
 	}
 
 	/** 
@@ -129,6 +154,28 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 */
 	public void svnCommit(File file, String comment) {
         exec("svn", "commit", "-m", comment, file.getPath());
+	}
+
+	/** 
+	 * commit all cached changes
+	 * @param file the file
+	 * @param comment checkin comment
+	 */
+	public void svnCommit(String comment) {
+		if (uncommittedChanges.size() == 0) {
+			return;
+		}
+		List<String> fullCommand = new ArrayList<String>();
+		fullCommand.add("svn");
+		fullCommand.add("commit");
+		fullCommand.add("-m");
+		fullCommand.add(comment);
+		fullCommand.addAll(uncommittedChanges);
+		String[] cmd = fullCommand.toArray(
+				new String[fullCommand.size()]);
+        //exec("svn", "commit", "-m", comment, paths);
+		exec(cmd);
+        uncommittedChanges.clear();
 	}
 
 }

@@ -18,4 +18,12 @@ public class SubversionTestCaseTest extends SubversionTestCase {
 		svnCommit(tempFile, "test update");
 	}
 	
+	public void testSvnBatchedCommit() throws IOException { 
+		File tempFile1 = File.createTempFile(TEMP_FILE_PREFIX, null, svnwc);
+		File tempFile2 = File.createTempFile(TEMP_FILE_PREFIX, null, svnwc);
+		svnAdd(tempFile1);
+		svnAdd(tempFile2);
+		svnCommit("batched commit");
+	}
+	
 }

@@ -2,6 +2,7 @@ package hudson.model;
 
 import hudson.tasks.Builder;
 import hudson.tasks.Shell;
+import hudson.triggers.Trigger;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,9 @@ public abstract class HudsonTestCase extends TestCase {
 
         // Limit to 1 executor
         setNumExecutors(1);
+        
+        // start the Hudson cron thread
+        Trigger.init();
     }
 
     @Override
@@ -90,17 +94,24 @@ public abstract class HudsonTestCase extends TestCase {
     }
 
     protected Result waitForBuild(int buildToWaitFor, Project project) {
+    	return waitForBuild(buildToWaitFor, project, 20);
+    }
+
+    protected Result waitForBuild(int buildToWaitFor, Project project, int timeoutInSeconds) {
+    	int timeout = timeoutInSeconds * 1000;
         try {
             long slept = 0;
             while (project.getBuilds().size() != buildToWaitFor || project.getBuildByNumber(buildToWaitFor).isBuilding()) {
                 Thread.sleep(100);
                 slept += 100;
-                if (slept >= 20000) 
-                    fail("Timed out waiting 20 seconds for project " + project.getName() + " build #" + buildToWaitFor);
+                if (slept >= timeout) 
+                    fail("Timed out waiting " + timeoutInSeconds
+                    		+ " seconds for project " + project.getName() 
+                    		+ " build #" + buildToWaitFor);
             }
 
             Build build = ((Build) project.getBuildByNumber(buildToWaitFor));
-            System.out.println(build.getLog());
+            //System.out.println(build.getLog());
             return build.getResult();
         } catch (Exception e) {
             throw new RuntimeException(e);
