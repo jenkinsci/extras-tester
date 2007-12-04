@@ -30,10 +30,13 @@ import antlr.ANTLRException;
  * 
  * 
   
-#Hudson logging related to dependency based build order
+#Hudson logging related to dependency based build order.
+#Make this change to the existing entry in the 
+#JRE_HOME/lib/logging.properties file
 java.util.logging.ConsoleHandler.level = FINER
+#Add these entries to the 
+#JRE_HOME/lib/logging.properties file
 hudson.DependencyRunner.level = FINE 
-hudson.model.Executor.level = FINE
 hudson.triggers.Trigger.level = FINE 
 
  * 
@@ -132,18 +135,21 @@ public class BuildInDependOrderTest extends SubversionTestCase {
 		projB = createSubversionProject("B");
 		projC = createSubversionProject("C");
 		svnCommit("create projects");
+		setCommandForAllProjects("sh -xe " + BUILD_SHELL + " $JOB_NAME");
+	}
 
+	private void setupDependencies() throws IOException {
 		// Setup dependencies
+		for (TestProjectBuildOrder project : allProjects) { 
+			assertEquals(0, project.project.getUpstreamProjects().size());
+			assertEquals(0, project.project.getDownstreamProjects().size());
+		}
 		proj1.project.addPublisher(new BuildTrigger(Arrays
 				.asList(new AbstractProject[] { proj2.project }), null));
 		proj2.project.addPublisher(new BuildTrigger(Arrays
 				.asList(new AbstractProject[] { projA.project, projB.project }),
 				null));
 		hudson.rebuildDependencyGraph();
-
-		setCommandForAllProjects("sh -xe " + BUILD_SHELL + " $JOB_NAME");
-		startPollingForAllProjects();
-
 	}
 
 	private void startPollingForAllProjects() {
@@ -166,7 +172,7 @@ public class BuildInDependOrderTest extends SubversionTestCase {
 		svnCommit("touched all projects");
 	}
 
-	private final int WAIT_FOR_IN_SECONDS = 80; 
+	private final int WAIT_FOR_IN_SECONDS = 120; 
 	private void waitForAllProjectsToBuild(int buildNumber) {
 		for (TestProjectBuildOrder project : allProjects) {
 			waitForBuild(buildNumber, project.project, WAIT_FOR_IN_SECONDS);
@@ -184,18 +190,19 @@ public class BuildInDependOrderTest extends SubversionTestCase {
 		return tfsProject;
 	}
 
-	/**
-	 * build the top level projects for the first time.
-	 * 
-	 * @throws ANTLRException
-	 * @throws IOException
-	 */
-	protected void buildTopLevelProjects() throws ANTLRException, IOException {
+	private void doInitialBuildOfAllProjects() throws ANTLRException, IOException {
 		createProjects();
-		assertEquals(0, proj1.project.getBuilds().size());
-		assertSuccess(build(proj1.project));
-		assertSuccess(build(projC.project));
+		
+		// have to start polling before we build, 
+		// or will get error related to not being 
+		// able to find scm polling log file. 
+		startPollingForAllProjects();
+		
+		//buildAllProjects();
 		waitForAllProjectsToBuild(1);
+		for (TestProjectBuildOrder project : allProjects) {
+			assertEquals(1, project.project.builds.size());
+		}
 		clearBuildLog();
 	}
 
@@ -213,7 +220,6 @@ public class BuildInDependOrderTest extends SubversionTestCase {
 		}
 		return file;
 	}
-
 	
 	@SuppressWarnings("unchecked")
 	private List<String> readBuildLog() throws IOException {
@@ -226,9 +232,9 @@ public class BuildInDependOrderTest extends SubversionTestCase {
 
 	private void doScmTriggeredBuild() throws ANTLRException, IOException {
 		int BUILD_NUMBER_TO_WAIT_FOR = 2;
-		buildTopLevelProjects();
+		doInitialBuildOfAllProjects();
+		setupDependencies();
 		touchAllProjects();
-		startPollingForAllProjects();
 		waitForAllProjectsToBuild(BUILD_NUMBER_TO_WAIT_FOR);
 	}
 
@@ -256,141 +262,197 @@ public class BuildInDependOrderTest extends SubversionTestCase {
 		setNumExecutors(2);
 		SCMTrigger.DESCRIPTOR.synchronousPolling = false;
 		SCMTrigger.DESCRIPTOR.setPollingThreadCount(0);
+		//This next change was emailed to the dev list as a patch, but 
+		// has not been implemented. 
 		//Executor.POSTPONE_BUILDS_IF_DEPENDEE_BUILDING = false; 
 	}
 
 	/**
 	 * make sure can create/build projects.
 	 */
-	public void DONE_testBuildProjects() throws ANTLRException, IOException {
-		SCMTrigger.DESCRIPTOR.synchronousPolling = true;
-		SCMTrigger.DESCRIPTOR.setPollingThreadCount(1);
-		buildTopLevelProjects();
+	public void testBuildProjects() throws ANTLRException, IOException {
+		doInitialBuildOfAllProjects();
 	}
 
-// the following tests are commented out since they haven't been run 
-//  yet on all supported Hudson environments. 	
-//	public void testCurrentHudsonBehavior() throws Exception {
-//
-//		setNumExecutors(5);
-//		SCMTrigger.DESCRIPTOR.synchronousPolling = false;
-//		SCMTrigger.DESCRIPTOR.setPollingThreadCount(0);
-//		doScmTriggeredBuild();
-//
-//		// note that B and A start before 2 does,
-//		// even though they depend on 2. 
-//		String observedOrder[] = { 
-//				"1s", "Bs", "As", "2s", "Cs", 
-//				"Bf", "Af", "1f", "2f", "Cf"
-//		};
-//		
-//		doTestOrderMatchesExpected(observedOrder);
-//		// this next line fails because 2 starts before 1 is finished
-//		//doTestOrderMatchesDependencies();
-//	}
-//
-//	/**
-//	 * Test synchronous SCM polling with serial builds.
-//	 * 
-//	 * @throws Exception
-//	 */
-//	public void testSynchronousPollingAndSerialBuilds() throws Exception {
-//
-//		setNumExecutors(1);
-//		SCMTrigger.DESCRIPTOR.synchronousPolling = true;
-//		SCMTrigger.DESCRIPTOR.setPollingThreadCount(1);
-//		doScmTriggeredBuild();
-//
-//		// While the build order respects dependencies, lack of parallel builds 
-//		// prevents C from starting until other (unrelated) projects are finished.
-//		// Ideally, C would start at the same time as 1. 
-//		String observedOrder[] = { 
-//				"1s", "1f", 
-//				"2s", "2f", 
-//				"Bs", "Bf", 
-//				"As", "Af", 
-//				"Cs", "Cf" 
-//		};
-//		
-//		doTestOrderMatchesExpected(observedOrder);
-//		// this next line fails because C starts too late 
-//		//doTestOrderMatchesDependencies();
-//	}
-//
-//	/**
-//	 * Test synchronous SCM polling with parallel builds.
-//	 * 
-//	 * @throws Exception
-//	 */
-//	public void testSynchronousPollingAndParallelBuilds() throws Exception {
-//
-//		setNumExecutors(5);
-//		SCMTrigger.DESCRIPTOR.synchronousPolling = true;
-//		SCMTrigger.DESCRIPTOR.setPollingThreadCount(1);
-//		doScmTriggeredBuild();
-//
-//		// When we enable parallel builds, dependency order is no longer 
-//		// respected (even though we have serial SCM polling!).
-//		String observedOrder[] = { 
-//				"2s", "1s", "Cs", "As", "Bs", 
-//				"2f", "Af", "1f", "Cf", "Bf" 
-//		};
-//		
-//		doTestOrderMatchesExpected(observedOrder);
-//		// this next line fails because 2 starts before 1
-//		//doTestOrderMatchesDependencies();
-//	}
-//
-//	/**
-//	 * Test synchronous SCM polling with parallel builds using modified Executor functionality.
-//	 * 
-//	 * @throws Exception
-//	 */
-//	public void testSynchronousPollingAndParallelBuildsWithConditionalExecution() throws Exception {
-//
-//		setNumExecutors(5);
-//		SCMTrigger.DESCRIPTOR.synchronousPolling = true;
-//		SCMTrigger.DESCRIPTOR.setPollingThreadCount(0);
-//		//Executor.POSTPONE_BUILDS_IF_DEPENDEE_BUILDING = true; 
-//		doScmTriggeredBuild();
-//
+	/**
+	 * Test current Hudson behavior. 
+	 * This test fails because the build order is random on each run. 
+	 * @throws Exception
+	 */
+	public void FAILStestCurrentHudsonBehavior() throws Exception {
+
+		setNumExecutors(5);
+		SCMTrigger.DESCRIPTOR.synchronousPolling = false;
+		SCMTrigger.DESCRIPTOR.setPollingThreadCount(0);
+		doScmTriggeredBuild();
+
+		// note that B and A start before 2 does,
+		// even though they depend on 2. 
+		String observedOrder[] = { 
+				"1s", "Cs", "As", "2s", "Bs", 
+				"1f", "Cf", "Af", "2f"
+		};
+		
+		doTestOrderMatchesExpected(observedOrder);
+		// this next line fails because 2 starts before 1 is finished
+		//doTestOrderMatchesDependencies();
+	}
+
+	/**
+	 * Test synchronous SCM polling with serial builds.
+	 * This test fails because the build order is random on each run.
+	 * NOTE: These settings are the only ones that fully respect dependency order.  
+	 * @throws Exception
+	 */
+	public void FAILStestSynchronousPollingAndSerialBuilds() throws Exception {
+
+		setNumExecutors(1);
+		SCMTrigger.DESCRIPTOR.synchronousPolling = true;
+		SCMTrigger.DESCRIPTOR.setPollingThreadCount(1);
+		doScmTriggeredBuild();
+
+		// While the build order respects dependencies, lack of parallel builds 
+		// prevents C from starting until other (unrelated) projects are finished.
+		// Ideally, C would start at the same time as 1. 
+		String observedOrderSometimes[] = { 
+				"1s", "1f", 
+				"2s", "2f", 
+				"Bs", "Bf", 
+				"As", "Af", 
+				"Cs", "Cf" 
+		};
+		String observedOrder[] = { 
+				"Cs", "Cf", 
+				"1s", "1f", 
+				"2s", "2f", 
+				"Bs", "Bf", 
+				"As", "Af" 
+		};
+		
+		doTestOrderMatchesExpected(observedOrder);
+		// this next line fails because C starts too late 
+		//doTestOrderMatchesDependencies();
+	}
+
+	/**
+	 * Test synchronous SCM polling with parallel builds.
+	 * This test fails because the build order is random on each run. 
+	 * @throws Exception
+	 */
+	public void FAILStestSynchronousPollingAndParallelBuilds() throws Exception {
+
+		setNumExecutors(5);
+		SCMTrigger.DESCRIPTOR.synchronousPolling = true;
+		SCMTrigger.DESCRIPTOR.setPollingThreadCount(1);
+		doScmTriggeredBuild();
+
+		// When we enable parallel builds, dependency order is no longer 
+		// respected (even though we have serial SCM polling!).
+		String observedOrder[] = { 
+				"2s", "1s", "Bs", "As", "Cs", 
+				"2f", "Af", "1f", "Cf", "Bf" 
+		};
+		
+		doTestOrderMatchesExpected(observedOrder);
+		// this next line fails because 2 starts before 1
+		//doTestOrderMatchesDependencies();
+	}
+
+	/**
+	 * Test synchronous SCM polling with parallel builds using modified Executor functionality.
+	 * This test fails because the build order is random on each run.
+	 * If this technique worked, we could give users the choice of parallel builds or parallel SCM polling. 
+	 * The help feature for such a feature might read: 
+  "If you want interdependent projects to always build in dependency order, you must use single threaded SCM polling. 
+  Use multithreaded SCM polling to get the fastest builds in situations where SCM polling is I/O intensive."
+  
+	 * @throws Exception
+	 */
+	public void FAILStestSynchronousPollingAndParallelBuildsWithConditionalExecution() throws Exception {
+
+		setNumExecutors(5);
+		SCMTrigger.DESCRIPTOR.synchronousPolling = true;
+		SCMTrigger.DESCRIPTOR.setPollingThreadCount(0);
+		//This next change was emailed to the dev list as a patch, but 
+		// has not been implemented. 
+		//Executor.POSTPONE_BUILDS_IF_DEPENDEE_BUILDING = true; 
+		doScmTriggeredBuild();
+
 //		// Looks good.
 //		String observedOrder[] = { 
 //				"1s", "Cs", "1f", "Cf", 
 //				"2s", "2f", 
 //				"Bs", "As", "Bf", "Af" 
 //		};
-//		
-//		doTestOrderMatchesExpected(observedOrder);
-//		doTestOrderMatchesDependencies();
-//	}
-//	
-//	/**
-//	 * Test using current Hudson behavior (asynch polling) with one polling thread.
-//	 * 
-//	 * @throws Exception
-//	 */
-//	public void testCurrentHudsonWithOneExecutorAndOnePollingThread() throws Exception {
-//
-//		setNumExecutors(1);
-//		SCMTrigger.DESCRIPTOR.synchronousPolling = false;
-//		SCMTrigger.DESCRIPTOR.setPollingThreadCount(1);
-//		doScmTriggeredBuild();
-//
-//		// While the build order respects dependencies, lack of parallel builds 
-//		// prevents C from starting until other (unrelated) projects are finished.
-//		// Ideally, C would start at the same time as 1. 
-//		String observedOrder[] = { 
-//				"1s", "1f", 
-//				"2s", "2f", 
-//				"Bs", "Bf", 
-//				"As", "Af", 
-//				"Cs", "Cf" 
-//		};
-//		
-//		doTestOrderMatchesExpected(observedOrder);
-//		// this next line fails because C starts too late 
-//		//doTestOrderMatchesDependencies();
-//	}
+		String observedOrder[] = { 
+				"1s", "2s", "Bs", "Cs", "As", 
+				"1f", "Bf", "Cf", "2f", "Af" 
+		};
+		
+		doTestOrderMatchesExpected(observedOrder);
+		doTestOrderMatchesDependencies();
+	}
+	
+	/**
+	 * Test using current Hudson behavior (asynch polling) with one executor and 
+	 * one polling thread. If this works, it supports not having to implement 
+	 * synchronous polling, instead we can just limit number of polling threads 
+	 * and number of executors to 1. 
+	 * 
+	 * @throws Exception
+	 */
+	public void testCurrentHudsonWithOneExecutorAndOnePollingThread() throws Exception {
+
+		setNumExecutors(1);
+		SCMTrigger.DESCRIPTOR.synchronousPolling = false;
+		SCMTrigger.DESCRIPTOR.setPollingThreadCount(1);
+		doScmTriggeredBuild();
+
+		// While the build order respects dependencies, lack of parallel builds 
+		// prevents C from starting until other (unrelated) projects are finished.
+		// Ideally, C would start at the same time as 1. 
+		String observedOrder[] = { 
+				"1s", "1f", 
+				"2s", "2f", 
+				"As", "Af", 
+				"Bs", "Bf", 
+				"Cs", "Cf" 
+		};
+		
+		doTestOrderMatchesExpected(observedOrder);
+		// this next line fails because C starts too late 
+		//doTestOrderMatchesDependencies();
+	}
+	
+	/**
+	 * Test using current Hudson behavior (asynch polling) with one executor and 
+	 * one polling thread. If this worked, we would not have to implement 
+	 * synchronous polling, instead we could just limit number of executors to 1. 
+	 * 
+	 * @throws Exception
+	 */
+	public void FAILStestCurrentHudsonWithOneExecutor() throws Exception {
+
+		setNumExecutors(1);
+		SCMTrigger.DESCRIPTOR.synchronousPolling = false;
+		SCMTrigger.DESCRIPTOR.setPollingThreadCount(0);
+		doScmTriggeredBuild();
+
+		// While the build order respects dependencies, lack of parallel builds 
+		// prevents C from starting until other (unrelated) projects are finished.
+		// Ideally, C would start at the same time as 1. 
+		String observedOrder[] = { 
+				"2s", "2f", 
+				"Bs", "Bf", 
+				"As", "Af", 
+				"Cs", "Cf", 
+				"1s", "1f", 
+				"2s", "2f" 
+		};
+		
+		doTestOrderMatchesExpected(observedOrder);
+		// this next line fails because C starts too late 
+		//doTestOrderMatchesDependencies();
+	}
 	
 }
