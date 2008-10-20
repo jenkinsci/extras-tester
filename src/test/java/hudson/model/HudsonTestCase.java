@@ -87,17 +87,17 @@ public abstract class HudsonTestCase extends TestCase {
      * @return build result, or null if project is disabled
      * @throws Exception
      */
-    protected Result build(Project project) {
+    protected Build build(Project project) {
         if (!project.scheduleBuild())
             return null;
         return waitForNextBuild(project);
     }
 
-    protected Result waitForBuild(int buildToWaitFor, Project project) {
+    protected Build waitForBuild(int buildToWaitFor, Project project) {
     	return waitForBuild(buildToWaitFor, project, 20);
     }
 
-    protected Result waitForBuild(int buildToWaitFor, Project project, int timeoutInSeconds) {
+    protected Build waitForBuild(int buildToWaitFor, Project project, int timeoutInSeconds) {
     	int timeout = timeoutInSeconds * 1000;
         try {
             long slept = 0;
@@ -111,14 +111,14 @@ public abstract class HudsonTestCase extends TestCase {
             }
 
             Build build = ((Build) project.getBuildByNumber(buildToWaitFor));
-            //System.out.println(build.getLog());
-            return build.getResult();
+            System.out.println(build.getLog());
+            return build;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    protected Result waitForNextBuild(Project project) {
+    protected Build waitForNextBuild(Project project) {
         return waitForBuild(project.getBuilds().size() + 1, project);
     }
 
@@ -154,8 +154,10 @@ public abstract class HudsonTestCase extends TestCase {
         assertTrue("Expected FAILURE, got " + result.toString(), result.equals(Result.FAILURE));
     }
 
-    public void exec(String... args) {
+    public void exec(File wdir, String... args) {
         Execute exec = new Execute();
+        if (wdir != null)
+        	exec.setWorkingDirectory(wdir);
         exec.setCommandline(args);
         int status;
         try {
@@ -167,6 +169,10 @@ public abstract class HudsonTestCase extends TestCase {
             throw new RuntimeException("Command returned status " + status + ": " + Arrays.asList(args));
     }
     
+    public void exec(String... args) {
+         exec(null, args);
+    }
+
     /**
      * Check whether we are running on Microsoft windoze. 
      * Only tested for Windows XP. 

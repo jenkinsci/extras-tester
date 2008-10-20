@@ -7,9 +7,9 @@ import hudson.triggers.Trigger;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.internal.io.fs.FSRepositoryFactory;
 import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
@@ -39,7 +39,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 		svnrepo.mkdir();
 		svnwc = new File(tempdir, "wc");
 		svnwc.mkdir();
-		exec("svnadmin", "create", svnrepo.getPath());
+		exec("svnadmin", "create", "--pre-1.5-compatible", svnrepo.getPath());
 
 		// make repository url platform independent
 		repositoryLocation = getFileProtocolAndAbsolutePathStart()
@@ -144,7 +144,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 * @param file the file
 	 */
 	public void svnCache(File file) {
-		uncommittedChanges.add("\"" + file.getPath() + "\"");
+		uncommittedChanges.add(file.getPath());
 	}
 
 	/** 
@@ -153,7 +153,9 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 * @param comment checkin comment
 	 */
 	public void svnCommit(File file, String comment) {
-        exec("svn", "commit", "-m", comment, file.getPath());
+		String[] cmd = {"svn", "commit", "-m", comment, file.getPath()};
+		System.out.println(StringUtils.join(cmd, ' '));
+        exec(cmd);
 	}
 
 	/** 
@@ -173,7 +175,8 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 		fullCommand.addAll(uncommittedChanges);
 		String[] cmd = fullCommand.toArray(
 				new String[fullCommand.size()]);
-        //exec("svn", "commit", "-m", comment, paths);
+
+		System.out.println(StringUtils.join(cmd, ' '));
 		exec(cmd);
         uncommittedChanges.clear();
 	}

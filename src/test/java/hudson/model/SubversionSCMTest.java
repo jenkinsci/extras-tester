@@ -34,29 +34,30 @@ public class SubversionSCMTest extends SubversionTestCase {
     public void testDeleteProject() {
         FreeStyleProject project = new FreeStyleProject(Hudson.getInstance(), "test");
         File projectDir = createSubversionProject(project);
-        File hello = new File(projectDir, "hello");
+        svnCommit("Add projects");
         setCommand(project, "echo Hello World");
 
         Result result;
 
-        result = build(project);
+        result = build(project).getResult();
         assertSuccess(result);
 
+        File hello = new File(projectDir, "hello");
         exec("touch", hello.getPath());
         exec("svn", "add", hello.getPath());
         exec("svn", "commit", "-m", "hello", hello.getPath());
-        result = build(project);
+        result = build(project).getResult();
         assertSuccess(result);
 
         exec("svn", "up", projectDir.getPath());
         exec("svn", "rm", projectDir.getPath());
         exec("svn", "commit", "-m", "deleted", projectDir.getPath());
 
-        result = build(project);
+        result = build(project).getResult();
         assertFailure(result);
 
-        result = build(project);
-        assertNull("Project should be disabled", result);
+        Build build = build(project);
+        assertNull("Project should be disabled", build);
         assertTrue(project.disabled);
     }
 }

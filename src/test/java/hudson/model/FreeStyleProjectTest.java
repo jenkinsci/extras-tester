@@ -129,33 +129,33 @@ public class FreeStyleProjectTest extends HudsonTestCase {
 
         setCommand(project, "echo Hello World");
         nextChangeLog = null;
-        result = build(project);
+        result = build(project).getResult();
         assertSuccess(result);
         assertNull("Not expecting email: " + mail, mail);
 
         setCommand(project, "glops");
         nextChangeLog = null;
-        result = build(project);
+        result = build(project).getResult();
         assertFailure(result);
         assertNull("Not expecting recipients: " + mail.getAllRecipients(), mail.getAllRecipients());
 
         setCommand(project, "echo Hello World");
         nextChangeLog = null;
-        result = build(project);
+        result = build(project).getResult();
         assertSuccess(result);
         // FIXME in the first test, mail is null, here mail.getAllRecipients() is null!
         assertNull("Not expecting recipients: " + mail.getAllRecipients(), mail.getAllRecipients());
 
         setCommand(project, "nonexistentcommand1");
         nextChangeLog = new File("src/test/java/hudson/model/changelog-user1.xml");
-        result = build(project);
+        result = build(project).getResult();
         assertFailure(result);
         assertTrue("number of recipients not 1", mail.getAllRecipients().length == 1);
         assertEquals(mail.getAllRecipients()[0], new InternetAddress("user1@company.com"));
 
         setCommand(project, "nonexistentcommand2");
         nextChangeLog = new File("src/test/java/hudson/model/changelog-user2.xml");
-        result = build(project);
+        result = build(project).getResult();
         assertFailure(result);
         assertTrue("number of recipients not 2", mail.getAllRecipients().length == 2);
         assertTrue(Arrays.asList(mail.getAllRecipients()).indexOf(new InternetAddress("user1@company.com")) != -1);
@@ -163,7 +163,7 @@ public class FreeStyleProjectTest extends HudsonTestCase {
 
         setCommand(project, "echo Back to normal");
         nextChangeLog = new File("src/test/java/hudson/model/changelog-user2.xml");
-        result = build(project);
+        result = build(project).getResult();
         assertSuccess(result);
         assertTrue("number of recipients not 2", mail.getAllRecipients().length == 2);
         assertTrue(Arrays.asList(mail.getAllRecipients()).indexOf(new InternetAddress("user1@company.com")) != -1);
@@ -171,7 +171,7 @@ public class FreeStyleProjectTest extends HudsonTestCase {
 
         setCommand(project, "new failure");
         nextChangeLog = new File("src/test/java/hudson/model/changelog-user1.xml");
-        result = build(project);
+        result = build(project).getResult();
         assertFailure(result);
         assertTrue("number of recipients not 1", mail.getAllRecipients().length == 1);
         assertEquals(mail.getAllRecipients()[0], new InternetAddress("user1@company.com"));

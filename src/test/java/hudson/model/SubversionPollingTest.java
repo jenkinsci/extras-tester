@@ -8,15 +8,12 @@ import hudson.triggers.Trigger;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
-
-import antlr.ANTLRException;
 
 /**
  * Test case for Commit spanning multiple interdependent projects
@@ -53,14 +50,14 @@ public class SubversionPollingTest extends SubversionTestCase {
         OutputStream out = new FileOutputStream(build);
         IOUtils.write("exit 0", out);
         out.close();
-        exec("svn", "add", build.getPath());
-        exec("svn", "commit", "-m", "build", build.getPath());
+        svnAdd(build);
+        svnCommit("build");
 
-        assertSuccess(build(projectA));
+        assertSuccess(build(projectA).getResult());
         assertEquals(projectA.getBuilds().size(), 1);
         // projectB #1 is already in the queue because of the dependency
         //assertNull(build(projectB));
-        assertSuccess(waitForNextBuild(projectB));
+        assertSuccess(waitForNextBuild(projectB).getResult());
         assertEquals(projectB.getBuilds().size(), 1);
 
         File hello = new File(wcProjectA, "hello");
