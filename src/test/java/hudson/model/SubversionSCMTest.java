@@ -31,7 +31,7 @@ public class SubversionSCMTest extends SubversionTestCase {
                 .repositoryLocationsExist());
     }
 
-    public void testDeleteProject() {
+    public void testDeleteProject() throws Exception {
         FreeStyleProject project = new FreeStyleProject(Hudson.getInstance(), "test");
         File projectDir = createSubversionProject(project);
         svnCommit("Add projects");

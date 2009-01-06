@@ -62,7 +62,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 * @param projectName
 	 * @return working copy directory
 	 */
-	protected File createSubversionProject(FreeStyleProject project) {
+	protected File createSubversionProject(FreeStyleProject project) throws IOException {
 		File projectDir = new File(svnwc, project.getName());
 		exec("mkdir", projectDir.getPath());
 		svnAdd(projectDir);
@@ -124,7 +124,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 * add file to svn without committing. 
 	 * @param file the file
 	 */
-	public void svnAdd(File file) {
+	public void svnAdd(File file) throws IOException {
 		exec("svn", "add", file.getPath());
 		svnCache(file);
 	}
@@ -134,7 +134,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 * @param file the file
 	 * @param comment checkin comment
 	 */
-	public void svnAdd(File file, String comment) {
+	public void svnAdd(File file, String comment) throws IOException {
 		svnAdd(file);
         svnCommit(file, comment);
 	}
@@ -152,7 +152,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 * @param file the file
 	 * @param comment checkin comment
 	 */
-	public void svnCommit(File file, String comment) {
+	public void svnCommit(File file, String comment) throws IOException {
 		String[] cmd = {"svn", "commit", "-m", comment, file.getPath()};
 		System.out.println(StringUtils.join(cmd, ' '));
         exec(cmd);
@@ -163,7 +163,7 @@ public abstract class SubversionTestCase extends HudsonTestCase {
 	 * @param file the file
 	 * @param comment checkin comment
 	 */
-	public void svnCommit(String comment) {
+	public void svnCommit(String comment) throws IOException {
 		if (uncommittedChanges.size() == 0) {
 			return;
 		}

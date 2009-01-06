@@ -4,8 +4,10 @@ import hudson.tasks.Builder;
 import hudson.tasks.Shell;
 import hudson.triggers.Trigger;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -16,6 +18,8 @@ import javax.servlet.ServletContext;
 import junit.framework.TestCase;
 
 import org.apache.tools.ant.taskdefs.Execute;
+import org.apache.tools.ant.taskdefs.ExecuteStreamHandler;
+import org.apache.tools.ant.taskdefs.PumpStreamHandler;
 import org.easymock.EasyMock;
 
 public abstract class HudsonTestCase extends TestCase {
@@ -154,8 +158,11 @@ public abstract class HudsonTestCase extends TestCase {
         assertTrue("Expected FAILURE, got " + result.toString(), result.equals(Result.FAILURE));
     }
 
-    public void exec(File wdir, String... args) {
+    public String exec(File wdir, String... args) throws IOException {
         Execute exec = new Execute();
+        OutputStream out = new ByteArrayOutputStream();
+        ExecuteStreamHandler stream = new PumpStreamHandler(out);
+        exec.setStreamHandler(stream);
         if (wdir != null)
         	exec.setWorkingDirectory(wdir);
         exec.setCommandline(args);
@@ -167,9 +174,10 @@ public abstract class HudsonTestCase extends TestCase {
         }
         if (status != 0)
             throw new RuntimeException("Command returned status " + status + ": " + Arrays.asList(args));
+        return out.toString();
     }
     
-    public void exec(String... args) {
+    public void exec(String... args) throws IOException {
          exec(null, args);
     }
 
