@@ -4,6 +4,8 @@ import hudson.plugins.git.GitPublisher;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.RemoteRepository;
 import hudson.scm.ChangeLogSet;
+import hudson.tasks.Mailer;
+import hudson.util.StreamTaskListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -116,18 +118,27 @@ public class GitSCMTest extends HudsonTestCase {
         ChangeLogSet.Entry lastChange = (ChangeLogSet.Entry)changes.getItems()[0];
         assertEquals("Commit 3", lastChange.getMsg().trim());
         assertEquals("John Doe", lastChange.getAuthor().getId().trim());
+        Mailer.UserProperty user = lastChange.getAuthor().getProperty(Mailer.UserProperty.class);
+        // See https://hudson.dev.java.net/issues/show_bug.cgi?id=2827
+        // Mail is not being sent to people who broke the build when using Git
+        //assertEquals("john@doe.com", user.getAddress());
 
 		exec(externalRepo, "git", "branch", "newbranch");
 		createTestFile(externalRepo, "test2");
 		exec(externalRepo, "git", "add", "test2");
 		exec(externalRepo, "git", "commit", "-m", "Commit in newbranch");
-        b = build(p);
+
+		assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+
+		b = build(p);
         r = b.getResult();
         assertSuccess(r);
         changes = b.getChangeSet();
         assertEquals(1, changes.getItems().length);
         lastChange = (ChangeLogSet.Entry)changes.getItems()[0];
         assertEquals("Commit in newbranch", lastChange.getMsg().trim());
+        
+        assertFalse("Not expecting changes at this point", p.pollSCMChanges(new StreamTaskListener(System.out)));
 	}
 
 	/**
@@ -175,7 +186,9 @@ public class GitSCMTest extends HudsonTestCase {
 	}
 
 	/**
-	 * Test GitSCM with a specific branch that cannot be resolved as a valid branch name
+	 * Test with a branch setting that cannot be resolved as a valid branch
+	 * name, then test with an existing branch missing the leading origin/
+	 * 
 	 * @throws Exception
 	 */
 	public void testGitSCMBadBranch() throws Exception {
@@ -189,7 +202,7 @@ public class GitSCMTest extends HudsonTestCase {
 		exec(externalRepo, "git", "checkout", "-b", "newbranch");
         b = build(p);
         r = b.getResult();
-        // Git doesn't know about newbranch, only about origin/newbranch
-        assertFailure(r);
+        // GitSCM will prepend branch name with origin/
+        assertSuccess(r);
 	}
 }
