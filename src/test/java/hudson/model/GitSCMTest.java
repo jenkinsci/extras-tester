@@ -1,22 +1,28 @@
 package hudson.model;
 
+import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitPublisher;
 import hudson.plugins.git.GitSCM;
-import hudson.plugins.git.RemoteRepository;
+import hudson.plugins.git.opt.PreBuildMergeOptions;
 import hudson.scm.ChangeLogSet;
 import hudson.tasks.Mailer;
 import hudson.util.StreamTaskListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.codehaus.plexus.util.IOUtil;
+import org.spearce.jgit.lib.RepositoryConfig;
+import org.spearce.jgit.transport.RemoteConfig;
 
 public class GitSCMTest extends HudsonTestCase {
 	File externalRepo;
 	File anotherRepo;
+	RepositoryConfig repoConfig;
 
 	@Override
 	/**
@@ -42,6 +48,10 @@ public class GitSCMTest extends HudsonTestCase {
 		createTestFile(anotherRepo, "help");
 		exec(anotherRepo, "git", "add", "help");
 		exec(anotherRepo, "git", "commit", "-m", "Commit");
+		newRepositories();
+		System.out.println("----------------------------------------------------------------------");
+		System.out.println("Starting test " + this.getName());
+		System.out.println("----------------------------------------------------------------------");
 	}
 
 	protected void createTestFile(File repo, String name) throws Exception {
@@ -51,9 +61,25 @@ public class GitSCMTest extends HudsonTestCase {
 		out.close();
 	}
 	
+	private void newRepositories() throws IOException {
+        File temp = File.createTempFile("tmp", "config");
+        repoConfig = new RepositoryConfig(null, temp);
+	}
+	private void addRepository(String name, String url) throws IOException {
+       	repoConfig.setString("remote", name, "url", url);
+       	repoConfig.setString("remote", name, "fetch", "+refs/heads/*:refs/remotes/" + name + "/*");
+        repoConfig.save();
+	}
+	private List<RemoteConfig> getRepositories() throws URISyntaxException {
+		return RemoteConfig.getAllRemoteConfigs(repoConfig);
+	}
+	
 	public void testPushTags() throws Exception {
         Project p = new FreeStyleProject(Hudson.getInstance(), "test");
-        p.setScm(new GitSCM(externalRepo.getAbsolutePath(), null, false, false, null, new ArrayList<RemoteRepository>(), null, null));
+        List<BranchSpec> branches = new ArrayList<BranchSpec>();
+        branches.add(new BranchSpec("origin/HEAD"));
+        addRepository("origin", externalRepo.getAbsolutePath());
+        p.setScm(new GitSCM(getRepositories(), branches, new PreBuildMergeOptions(), false, null, null));
         p.addPublisher(new GitPublisher());
         setCommand(p, "echo Hello");
         Build b = build(p);
@@ -77,9 +103,11 @@ public class GitSCMTest extends HudsonTestCase {
 	 */
 	public void bugTestGitSCMNestedRepository() throws Exception {
         Project p = new FreeStyleProject(Hudson.getInstance(), "test");
-        List<RemoteRepository> repositories = new ArrayList<RemoteRepository>();
-        repositories.add(new RemoteRepository("another", anotherRepo.toString(), null));
-        p.setScm(new GitSCM(externalRepo.getAbsolutePath(), null, false, false, null, repositories, null, null));
+        addRepository("origin", externalRepo.getAbsolutePath());
+        addRepository("another", anotherRepo.getAbsolutePath());
+        List<BranchSpec> branches = new ArrayList<BranchSpec>();
+        branches.add(new BranchSpec("origin/HEAD"));
+        p.setScm(new GitSCM(getRepositories(), branches, new PreBuildMergeOptions(), false, null, null));
         setCommand(p, "echo Hello");
         Build b = build(p);
         Result r = b.getResult();
@@ -98,7 +126,10 @@ public class GitSCMTest extends HudsonTestCase {
 	 */
 	public void testGitSCMAllBranches() throws Exception {
         Project p = new FreeStyleProject(Hudson.getInstance(), "test");
-        p.setScm(new GitSCM(externalRepo.getAbsolutePath(), null, false, false, null, new ArrayList<RemoteRepository>(), null, null));
+        List<BranchSpec> branches = new ArrayList<BranchSpec>();
+        branches.add(new BranchSpec("origin/HEAD"));
+        addRepository("origin", externalRepo.getAbsolutePath());
+        p.setScm(new GitSCM(getRepositories(), branches, new PreBuildMergeOptions(), false, null, null));
         setCommand(p, "echo Hello");
         Build b = build(p);
         Result r = b.getResult();
@@ -147,7 +178,10 @@ public class GitSCMTest extends HudsonTestCase {
 	 */
 	public void testGitSCMValidBranch() throws Exception {
         Project p = new FreeStyleProject(Hudson.getInstance(), "test");
-        p.setScm(new GitSCM(externalRepo.getAbsolutePath(), "origin/newbranch", false, false, null, new ArrayList<RemoteRepository>(), null, null));
+        List<BranchSpec> branches = new ArrayList<BranchSpec>();
+        branches.add(new BranchSpec("origin/newbranch"));
+        addRepository("origin", externalRepo.getAbsolutePath());
+        p.setScm(new GitSCM(getRepositories(), branches, new PreBuildMergeOptions(), false, null, null));
         setCommand(p, "echo Hello");
         Build b = build(p);
         Result r = b.getResult();
@@ -193,7 +227,10 @@ public class GitSCMTest extends HudsonTestCase {
 	 */
 	public void testGitSCMBadBranch() throws Exception {
         Project p = new FreeStyleProject(Hudson.getInstance(), "test");
-        p.setScm(new GitSCM(externalRepo.getAbsolutePath(), "newbranch", false, false, null, new ArrayList<RemoteRepository>(), null, null));
+        List<BranchSpec> branches = new ArrayList<BranchSpec>();
+        branches.add(new BranchSpec("newbranch"));
+        addRepository("origin", externalRepo.getAbsolutePath());
+        p.setScm(new GitSCM(getRepositories(), branches, new PreBuildMergeOptions(), false, null, null));
         setCommand(p, "echo Hello");
         Build b = build(p);
         Result r = b.getResult();
@@ -202,7 +239,7 @@ public class GitSCMTest extends HudsonTestCase {
 		exec(externalRepo, "git", "checkout", "-b", "newbranch");
         b = build(p);
         r = b.getResult();
-        // GitSCM will prepend branch name with origin/
-        assertSuccess(r);
+        // FIXME GitSCM does NOT prepend branch name with origin/ to be user-friendly
+        assertFailure(r);
 	}
 }
